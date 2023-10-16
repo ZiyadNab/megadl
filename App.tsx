@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Dimensions, FlatList, Keyboard, ScrollView } from 'react-native';
+import { Image } from 'expo-image';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Dimensions, Keyboard } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import BottomSheet, { BottomSheetRefProps } from './Props/BottomSheet';
 import Toast from 'react-native-toast-message';
@@ -8,6 +9,7 @@ import axios from 'axios'
 import { APIResponseTypes } from './Types'
 import { download } from './Props/FileDownloader'
 import ImageSlider from './Props/ImageSlider';
+import { ALERT_TYPE, Dialog, AlertNotificationRoot, IConfigDialog } from 'react-native-alert-notification';
 
 export default function App() {
   const [mediaIndexing, setMediaIndexing] = useState<number>(0)
@@ -34,6 +36,7 @@ export default function App() {
   }
 
   const downloadBtn = async () => {
+    Keyboard.dismiss()
 
     if (url) {
 
@@ -41,7 +44,7 @@ export default function App() {
       if (urlPattern.test(url)) {
 
         // Request the given URL
-        await axios.get(`http://192.168.52.170:8080/api/v1/dl?url=${url}`)
+        await axios.get(`https://fnbrmena.com/api/v1/dl?url=${url}`)
           .then(async res => {
 
             // Set the data to the state
@@ -114,115 +117,114 @@ export default function App() {
   return (
 
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={styles.container}>
-        <StatusBar style="light" />
+      <AlertNotificationRoot>
+        <View style={styles.container}>
+          <StatusBar style="light" />
 
-        <Toast />
+          <Toast />
+          
 
-        <View style={styles.dlMainGrapperUI}>
-          <View>
-            <Text style={styles.headerText}>MEGA DOWNLOAD</Text>
-          </View>
+          <View style={styles.dlMainGrapperUI}>
+            <View>
+              <Text style={styles.headerText}>MEGA DOWNLOAD</Text>
+            </View>
 
-          <View style={styles.inputCountainer}>
-            <TextInput style={styles.urlTextInput}
-              placeholder='Paste a URL'
-              placeholderTextColor={"white"}
-              onChangeText={(val) => {
-                reactiveInputHandler(val)
-                setURL(val)
-              }} />
+            <View style={styles.inputCountainer}>
+              <TextInput style={styles.urlTextInput}
+                placeholder='Paste a URL'
+                placeholderTextColor={"white"}
+                onChangeText={(val) => {
+                  reactiveInputHandler(val)
+                  setURL(val)
+                  
+                }} />
 
-            <Image style={styles.inputPlatformImage} source={sourceImg} />
-          </View>
+              <Image style={styles.inputPlatformImage} source={sourceImg} />
+            </View>
 
-          <TouchableOpacity style={styles.TouchableOpacityButton} onPress={() => downloadBtn()}>
-            <Text style={styles.buttonText}>Download</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.TouchableOpacityButton} onPress={() => downloadBtn()}>
+              <Text style={styles.buttonText}>Download</Text>
+            </TouchableOpacity>
 
-          <BottomSheet ref={ref}>
-            {data !== null ? (
-              <View style={{ flex: 1 }}>
-                {/* Media Channel Icon */}
-                <View style={{ flexDirection: 'row' }}>
-                  <View>
-                    <Image style={{ aspectRatio: 1, height: 50, borderRadius: 25, marginHorizontal: 20 }} source={{ uri: data.data.author.avatarUrl }} />
-                  </View>
-                  <Text style={{ fontSize: 20, marginLeft: -10, fontWeight: '500' }}>{data.data.author.username}</Text>
-                  <View>
-                    <Image style={{ aspectRatio: 1, height: 15, borderRadius: 25, left: 3.5, top: 6.5 }} source={require('./assets/testResponse/verified.png')} />
-                  </View>
-                  <View>
-                    <Image style={{ aspectRatio: 1, height: 50, borderRadius: 25, alignSelf: 'flex-end', marginRight: -140 }} source={require('./assets/url/youtube.png')} />
-                  </View>
-                </View>
+            <BottomSheet ref={ref}>
+              {data !== null ? (
+                <View style={{ flex: 1 }}>
+                  {/* Media Channel Icon
+                  <View style={{ flexDirection: 'row', justifyContent: 'flex-right', aspectRatio: 2.5, height: 50 }}>
+                    <View>
+                      <Image style={{ aspectRatio: 1, height: 50, borderRadius: 25, marginHorizontal: 20 }} source={{ uri: data.data.author.avatarUrl }} />
+                    </View>
+                    <Text style={{ fontSize: 20, marginLeft: -10, fontWeight: '500' }}>{data.data.author.username}</Text>
+                    <View style={{position: 'absolute', right: -(screenWidth -130)}}>
+                      <Image style={{ aspectRatio: 1, height: 50, flex: 1}} source={require('./assets/url/youtube.png')} />
+                    </View>
+                  </View> */}
 
-                <Text style={{ fontSize: 10, marginTop: -25, marginBottom: 20, marginLeft: 90, fontWeight: '300' }}>13.9M Subscribers   •   1.6K Videos</Text>
+                  {/* <Text style={{ fontSize: 10, marginTop: -25, marginBottom: 20, marginLeft: 90, fontWeight: '300' }}>13.9M Subscribers   •   1.6K Videos</Text> */}
 
-                <View style={styles.responseSheet}>
+                  <View style={styles.responseSheet}>
 
-                  {/* Media Cover */}
-                  <View style={styles.mediaHandle}>
+                    {/* Media Cover */}
                     <View style={styles.mediaImageHandle}>
-
                       {data.data.images.length ? (
-                        <ImageSlider onIndexChanged={(i) => (setMediaIndexing(i))} images={data?.data.images}/>
+                        <View style={styles.mediaImage}>
+                          <ImageSlider images={data.data.images} onIndexChanged={(index) => setMediaIndexing(index)} />
+                        </View>
                       ) : data.data.coverImg !== null ? (
-                        <Image source={{ uri: data.data.coverImg }} style={styles.mediaImage}/>
+                        <Image source={{ uri: data.data.coverImg }} style={styles.mediaImage} />
                       ) : (
                         data?.data.video ? (
                           data?.data.video.map((i, e) => (
-                            <Image source={{ uri: i.coverImg }} style={styles.mediaImage}/>
+                            <Image source={{ uri: i.coverImg }} key={e} style={styles.mediaImage} />
                           ))
                         ) : (
                           <Text style={{ justifyContent: 'center', textAlign: 'center', color: 'black' }}>No images has been found :/</Text>
                         )
                       )}
-
                     </View>
 
-                    <Text style={{ color: 'black', marginTop: 2, fontWeight: '300', fontSize: 10 }}>
+                    <Text style={{ color: 'black', marginTop: 10, fontWeight: '300', fontSize: 10 }}>
                       {data?.data.stats.map((e, index) => (
                         <Text key={index}>
                           {`${e.value} ${e.type}`} {index !== data.data.stats.length - 1 && '\t\t\t•\t\t\t'}
                         </Text>
                       ))}
                     </Text>
-                  </View>
 
-                  {/* Qualities */}
-                  <Text style={{ color: 'black', marginTop: 10 }}>Choose your quality to download!</Text>
-                  <View style={styles.qualitiesHandle}>
+                    {/* Qualities */}
+                    <Text style={{ color: 'black', marginTop: 10 }}>Choose your quality to download!</Text>
+                    <View style={styles.qualitiesHandle}>
 
-                    {data.data.images.length ? (
-                      <TouchableOpacity key={mediaIndexing} style={[styles.Qualities, { width: 320 }]} onPress={() => download(data.data.images[mediaIndexing], data?.data.id)}>
-                        <Text style={styles.QualitiesText}>Download Image</Text>
-                      </TouchableOpacity>
-                    ) : data?.data.video[mediaIndexing].qualities ? (
-                      data?.data.video[mediaIndexing].qualities.map((a, index) => (
-                        <TouchableOpacity key={index} style={[styles.Qualities, { width: 100 }]} onPress={() => download(a.url, data?.data.id)}>
-                          <Text style={styles.QualitiesText}>{a.quality}</Text>
+                      {data.data.images.length ? (
+                        <TouchableOpacity key={mediaIndexing} style={[styles.Qualities, { width: 320 }]} onPress={() => download(data.data.images[mediaIndexing], data?.data.id)}>
+                          <Text style={styles.QualitiesText}>Download Image</Text>
                         </TouchableOpacity>
-                      ))
-                    ) : (
-                      <TouchableOpacity key={mediaIndexing} style={[styles.Qualities, { width: 320 }]} onPress={() => download(data?.data.video[mediaIndexing].url, data?.data.id)}>
-                        <Text style={styles.QualitiesText}>Download Video</Text>
+                      ) : data?.data.video[mediaIndexing].qualities ? (
+                        data?.data.video[mediaIndexing].qualities.map((a, index) => (
+                          <TouchableOpacity key={index} style={[styles.Qualities, { width: 100 }]} onPress={() => download(a.url, data?.data.id)}>
+                            <Text style={styles.QualitiesText}>{a.quality}</Text>
+                          </TouchableOpacity>
+                        ))
+                      ) : (
+                        <TouchableOpacity key={mediaIndexing} style={[styles.Qualities, { width: 320 }]} onPress={() => download(data?.data.video[mediaIndexing].url, data?.data.id)}>
+                          <Text style={styles.QualitiesText}>Download Video</Text>
+                        </TouchableOpacity>
+                      )}
+
+                    </View>
+
+                    <View style={{ marginTop: 10 }}>
+                      <TouchableOpacity disabled={data?.data.audio ? data?.data.audio.url === undefined || data?.data.audio.url === '' : true} onPress={() => (download(data?.data.audio.url, data?.data.audio.title))} style={{ width: 320, backgroundColor: 'lightgreen', paddingVertical: 10, borderRadius: 3, alignItems: 'center', }}>
+                        <Text style={styles.QualitiesText}>Download MP3</Text>
                       </TouchableOpacity>
-                    )}
-
-                  </View>
-
-                  <View style={{ marginTop: 10 }}>
-                    <TouchableOpacity disabled={data?.data.audio ? data?.data.audio.url === undefined || data?.data.audio.url === '' : true} onPress={() => (download(data?.data.audio.url, data?.data.audio.title))} style={{ width: 320, backgroundColor: 'lightgreen', paddingVertical: 10, borderRadius: 3, alignItems: 'center', }}>
-                      <Text style={styles.QualitiesText}>Download MP3</Text>
-                    </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ) : null}
-          </BottomSheet>
+              ) : null}
+            </BottomSheet>
+          </View>
         </View>
-      </View>
+      </AlertNotificationRoot>
     </GestureHandlerRootView>
   )
 }
@@ -242,22 +244,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  mediaHandle: {
-    alignItems: 'center',
-  },
-
   mediaImageHandle: {
     alignItems: 'center',
     overflow: 'hidden',
     borderRadius: 5,
     marginTop: 10,
     aspectRatio: 1.6,
-    height: 200,
-    zIndex: 5
+    height: 225,
+    resizeMode: 'cover',
+    marginBottom: 2,
+    shadowOffset: { width: 10, height: 10 },
+    shadowColor: 'black',
+    shadowOpacity: 1,
+    elevation: 10,
+    backgroundColor: "#0000",
+
   },
 
   mediaImage: {
-    resizeMode: 'repeat'
+    resizeMode: 'cover',
+    width: '100%',
+    height: '100%'
   },
 
   qualitiesHandle: {

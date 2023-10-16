@@ -1,21 +1,63 @@
-import React, { useState } from 'react';
-import { View, Image, StyleSheet } from 'react-native';
-import Swiper from 'react-native-swiper';
+import React, { useState, useEffect } from 'react';
+import { View, Image, Dimensions, Animated, StyleSheet, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler'
 
 interface ImageSliderProps {
   images: string[]; // Array of image URLs
   onIndexChanged: (index: number) => void;
 }
 
+const { width } = Dimensions.get('window');
+
 const ImageSlider: React.FC<ImageSliderProps> = ({ images, onIndexChanged }) => {
+  let scrollX = new Animated.Value(0)
+
+  let position = Animated.divide(scrollX, width);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const scrollViewWidth = event.nativeEvent.layoutMeasurement.width;
+    const contentOffsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffsetX / scrollViewWidth);
+    setCurrentIndex(index);
+
+    Animated.event(
+      [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+      {useNativeDriver: false}
+    )
+  }
+
+  useEffect(() => {
+    onIndexChanged(currentIndex)
+  }, [currentIndex])
+
   return (
-    <Swiper style={styles.wrapper} onIndexChanged={onIndexChanged} showsButtons={false}>
-      {images.map((image, index) => (
-        <View style={styles.slide} key={index}>
-          <Image source={{ uri: image }} style={styles.image} />
-        </View>
-      ))}
-    </Swiper>
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View
+      
+        style={styles.image}
+        >
+        <ScrollView
+          horizontal={true}
+          pagingEnabled={true}
+          showsHorizontalScrollIndicator={false}
+          
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          >
+          {images.map((source, i) => {
+            return (
+              <Image
+                key={i}
+                style={styles.image}
+                source={{ uri: source }}
+              />
+            );
+          })}
+        </ScrollView>
+      </View>
+    </View>
   );
 };
 
@@ -31,9 +73,10 @@ const styles = StyleSheet.create({
   },
   image: {
     aspectRatio: 1.6,
-    height: 200,
+    height: 225,
     resizeMode: 'cover',
   },
 });
 
 export default ImageSlider;
+

@@ -59,7 +59,7 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
     
     const context = useSharedValue({ y: 0 });
     const gesture = Gesture.Pan()
-      .manualActivation(true)
+      // .manualActivation(true)
       .onStart(() => {
         context.value = { y: translateY.value };
       })

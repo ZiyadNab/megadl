@@ -1,81 +1,80 @@
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as Notifications from 'expo-notifications';
-
-const sendNotification = async (message: string) => {
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'Download Status',
-      body: message,
-    },
-    trigger: null, // Send immediately
-  })
-};
-
-const callback = (downloadProgress: FileSystem.DownloadProgressData) => {
-  
-  const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
-  sendNotification(`Downloading ${Math.round(progress * 100)}%`);
-};
+import url from 'url'
+import path from 'path'
+import { ALERT_TYPE, Dialog, AlertNotificationRoot } from 'react-native-alert-notification';
+import Toast from 'react-native-toast-message';
 
 export const download = async (uri: string, filename: string) => {
-  await Notifications.requestPermissionsAsync()
-  console.log(uri)
+  const notiPermissions = await Notifications.getPermissionsAsync()
+  const checkPermissionStatus = await MediaLibrary.getPermissionsAsync()
+  if(!notiPermissions.granted || !checkPermissionStatus.granted){
+    FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync()
 
-  const splitUrl = uri.split('.');
-  const fileExtension = splitUrl[splitUrl.length - 1];
-  
-  const downloadResumable = FileSystem.createDownloadResumable(
-    uri,
-    `${FileSystem.documentDirectory}${filename}.jpeg`,
-    {},
-    callback
-  );
+    Dialog.show({
+      type: ALERT_TYPE.WARNING,
+      title: 'PERMISSIONS REQUIRED!',
+      textBody: 'To be able to download, we must have access to Notifications and Storage permissions!',
+      button: 'Grant Access',
+      async onPressButton() {
+        if(!notiPermissions.granted) await Notifications.requestPermissionsAsync()
+        if(!checkPermissionStatus.granted) await MediaLibrary.requestPermissionsAsync()
+        Dialog.hide()
+      },
+    })
+  }else{
 
-  const downloadedFile: FileSystem.FileSystemDownloadResult | undefined = await downloadResumable.downloadAsync();
-  if(downloadedFile) perm(downloadedFile)
+    Toast.show({
+      type: 'info',
+      text1: 'DOWNLOADING!',
+      text2: "Your media in now being downloaded.",
+      visibilityTime: 1500,
+      autoHide: true
+    })
+
+    const fileType = url.parse(uri)
+    const downloadResumable = FileSystem.createDownloadResumable(
+      uri,
+      `${FileSystem.documentDirectory}${filename}${path.extname(fileType.pathname || '')}`,
+      {},
+      async (downloadProgress: FileSystem.DownloadProgressData) => {
+        
+        if(downloadProgress.totalBytesWritten === downloadProgress.totalBytesExpectedToWrite){
+          Toast.hide()
+          Toast.show({
+            type: 'success',
+            text1: 'DOWNLOADED!',
+            text2: "Your media has been downloaded.",
+            visibilityTime: 5000,
+            autoHide: true
+          })
+        }
+      }
+    );
+
+    const downloadedFile: FileSystem.FileSystemDownloadResult | undefined = await downloadResumable.downloadAsync();
+    if(downloadedFile) perm(downloadedFile)
+  }
 }
 
 const perm = async (downloadedFile: FileSystem.FileSystemDownloadResult) => {
-  const checkPermissionStatus = await MediaLibrary.getPermissionsAsync()
-  if(checkPermissionStatus.granted){
-    try {
+  try {
       
-      const asset = await MediaLibrary.createAssetAsync(downloadedFile.uri);
-      const album = await MediaLibrary.getAlbumAsync('Download');
-      if (album == null) {
-        await MediaLibrary.createAlbumAsync('Download', asset, false);
-      } else {
-        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-      }
+    const asset = await MediaLibrary.createAssetAsync(downloadedFile.uri);
+    const album = await MediaLibrary.getAlbumAsync('Download');
 
-      return true
-    } catch (e) {
-      return false
+    if (album == null) {
+      await MediaLibrary.createAlbumAsync('Download', asset, true);
+    } else {
+      await MediaLibrary.addAssetsToAlbumAsync(asset, album, true);
     }
-  }else{
-    MediaLibrary.requestPermissionsAsync()
-    .then(async p => {
-      if(p.granted){
-        
-        try {
-          const asset = await MediaLibrary.createAssetAsync(downloadedFile.uri);
-          const album = await MediaLibrary.getAlbumAsync('Download');
-          if (album == null) {
-            await MediaLibrary.createAlbumAsync('Download', asset, false);
-          } else {
-            await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-          }
-    
-          return true
-        } catch (e) {
-          return false
-        }
 
-      }else{
-        
-      }
-    })
+    // Delete the downloaded file after adding it to the media library.
+    await FileSystem.deleteAsync(asset.uri);
+
+    return true
+  } catch (e) {
+    return false
   }
 }
