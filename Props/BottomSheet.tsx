@@ -1,5 +1,5 @@
 import { Dimensions, StyleSheet, View, Text } from 'react-native';
-import React, { useCallback, useImperativeHandle } from 'react';
+import React, { useCallback, useImperativeHandle, useState } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolate,
@@ -22,10 +22,12 @@ export type BottomSheetRefProps = {
   isActive: () => boolean;
   hasData: (val: boolean) => void;
   pos: () => number;
+  backgroundColor: (color: string) => void
 };
 
 const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
   ({ children }, ref) => {
+    const [bottomSheetBackground, setBottomSheetBackground] = useState<string>('#ffffff')
     const translateY = useSharedValue(0);
     const active = useSharedValue(false);
     const data = useSharedValue(false);
@@ -41,6 +43,10 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
       return active.value;
     }, []);
 
+    const backgroundColor = useCallback((color: string) => {
+      setBottomSheetBackground(color)
+    }, []);
+
     const hasData = useCallback((val: boolean) => {
       data.value = val;
     }, []);
@@ -49,11 +55,12 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
       return translateY.value;
     }, []);
 
-    useImperativeHandle(ref, () => ({ scrollTo, isActive, hasData, pos }), [
+    useImperativeHandle(ref, () => ({ scrollTo, isActive, hasData, pos, backgroundColor }), [
       scrollTo,
       isActive,
       hasData,
-      pos
+      pos,
+      backgroundColor
     ]);
 
     
@@ -93,7 +100,7 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
 
     return (
       <GestureDetector gesture={gesture}>
-        <Animated.View style={[styles.bottomSheetContainer, rBottomSheetStyle]}>
+        <Animated.View style={[styles.bottomSheetContainer, rBottomSheetStyle, { backgroundColor: bottomSheetBackground }]}>
           <View style={styles.line} />
           {children}
         </Animated.View>
@@ -106,7 +113,6 @@ const styles = StyleSheet.create({
   bottomSheetContainer: {
     height: SCREEN_HEIGHT,
     width: '100%',
-    backgroundColor: 'white',
     position: 'absolute',
     top: SCREEN_HEIGHT,
     borderRadius: 25,

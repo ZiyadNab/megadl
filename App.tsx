@@ -122,10 +122,11 @@ export default function App() {
           <StatusBar style="light" />
 
           <Toast />
-          
 
           <View style={styles.dlMainGrapperUI}>
-            <View>
+            
+            <View style={{marginTop: 75, alignItems: 'center'}}>
+              <Image source={require('./assets/inAppIcon.png')} style={{ width: 100, height: 100, marginBottom: 20 }}/>
               <Text style={styles.headerText}>MEGA DOWNLOAD</Text>
             </View>
 
@@ -142,9 +143,15 @@ export default function App() {
               <Image style={styles.inputPlatformImage} source={sourceImg} />
             </View>
 
-            <TouchableOpacity style={styles.TouchableOpacityButton} onPress={() => downloadBtn()}>
-              <Text style={styles.buttonText}>Download</Text>
-            </TouchableOpacity>
+            <View style={{flexDirection: 'row'}}>
+              <TouchableOpacity style={styles.DownlaodTouchableOpacityButton} onPress={() => downloadBtn()}>
+                <Text style={styles.buttonText}>Download</Text>
+              </TouchableOpacity>
+
+              {/* <TouchableOpacity style={styles.AppIconTouchableOpacityButton}>
+                <Image source={require('./assets/gear.png')} style={{width: 25, height: 25}}/>
+              </TouchableOpacity> */}
+            </View>
 
             <BottomSheet ref={ref}>
               {data !== null ? (
@@ -300,7 +307,6 @@ const styles = StyleSheet.create({
   // Header text
 
   headerText: {
-    marginTop: '50%',
     color: "white",
     fontSize: 25,
     letterSpacing: 10,
@@ -340,7 +346,7 @@ const styles = StyleSheet.create({
 
   // Button
 
-  TouchableOpacityButton: {
+  DownlaodTouchableOpacityButton: {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#068FFF',
@@ -348,6 +354,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 10,
     width: '50%',
+    marginRight: 5,
+    maxWidth: 500
+  },
+
+  AppIconTouchableOpacityButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#474747',
+    borderRadius: 10,
+    width: '12%',
     maxWidth: 500
   },
 

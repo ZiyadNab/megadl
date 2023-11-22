@@ -7,10 +7,10 @@ import { ALERT_TYPE, Dialog, AlertNotificationRoot } from 'react-native-alert-no
 import Toast from 'react-native-toast-message';
 
 export const download = async (uri: string, filename: string) => {
-  const notiPermissions = await Notifications.getPermissionsAsync()
-  const checkPermissionStatus = await MediaLibrary.getPermissionsAsync()
-  if(!notiPermissions.granted || !checkPermissionStatus.granted){
-    FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync()
+  
+  const notificationPermissions = await Notifications.getPermissionsAsync()
+  const mediaLibraryPermission = await MediaLibrary.getPermissionsAsync()
+  if(!notificationPermissions.granted || !mediaLibraryPermission.granted){
 
     Dialog.show({
       type: ALERT_TYPE.WARNING,
@@ -18,8 +18,8 @@ export const download = async (uri: string, filename: string) => {
       textBody: 'To be able to download, we must have access to Notifications and Storage permissions!',
       button: 'Grant Access',
       async onPressButton() {
-        if(!notiPermissions.granted) await Notifications.requestPermissionsAsync()
-        if(!checkPermissionStatus.granted) await MediaLibrary.requestPermissionsAsync()
+        if(!notificationPermissions.granted) await Notifications.requestPermissionsAsync()
+        if(!mediaLibraryPermission.granted) await MediaLibrary.requestPermissionsAsync()
         Dialog.hide()
       },
     })
@@ -36,7 +36,7 @@ export const download = async (uri: string, filename: string) => {
     const fileType = url.parse(uri)
     const downloadResumable = FileSystem.createDownloadResumable(
       uri,
-      `${FileSystem.documentDirectory}${filename}${path.extname(fileType.pathname || '')}`,
+      `${FileSystem.cacheDirectory}${filename}${path.extname(fileType.pathname || '')}`,
       {},
       async (downloadProgress: FileSystem.DownloadProgressData) => {
         
@@ -62,19 +62,18 @@ const perm = async (downloadedFile: FileSystem.FileSystemDownloadResult) => {
   try {
       
     const asset = await MediaLibrary.createAssetAsync(downloadedFile.uri);
-    const album = await MediaLibrary.getAlbumAsync('Download');
+    // const album = await MediaLibrary.getAlbumAsync('megadl');
 
-    if (album == null) {
-      await MediaLibrary.createAlbumAsync('Download', asset, true);
-    } else {
-      await MediaLibrary.addAssetsToAlbumAsync(asset, album, true);
-    }
+    // if (album == null) {
+    //   await MediaLibrary.createAlbumAsync('megadl', asset, false);
+    // } else {
+    //   await MediaLibrary.addAssetsToAlbumAsync(asset, album, false);
+    // }
 
-    // Delete the downloaded file after adding it to the media library.
-    await FileSystem.deleteAsync(asset.uri);
-
-    return true
+    // Delete cached file
+    await FileSystem.deleteAsync(downloadedFile.uri)
+    
   } catch (e) {
-    return false
+    console.log(e)
   }
 }
