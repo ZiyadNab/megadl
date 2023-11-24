@@ -7,7 +7,7 @@ import {
     ViewProps,
     ViewStyle
 } from 'react-native';
-  
+
 export type APIResponseTypes = {
     result: Boolean,
     data: {
@@ -19,7 +19,6 @@ export type APIResponseTypes = {
                 value: number
             }
         ],
-        coverImg: string,
         video: [
             {
                 url: string,
@@ -33,6 +32,19 @@ export type APIResponseTypes = {
             }
         ],
         images: [],
+        combined: [
+            {
+                url: string,
+                coverImg: string,
+                isVideo: boolean,
+                qualities: [
+                    {
+                        url: string,
+                        quality: string
+                    }
+                ]
+            }
+        ],
         audio: {
             title: string,
             url: string,
@@ -45,5 +57,5 @@ export type APIResponseTypes = {
             avatarUrl: string
         }
     }
-    
+
 }

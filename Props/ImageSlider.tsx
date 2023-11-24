@@ -2,8 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Image, Dimensions, Animated, StyleSheet, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler'
 
+interface imagesResponse {
+  coverImg: string,
+  isVideo: boolean
+}
+
 interface ImageSliderProps {
-  images: string[]; // Array of image URLs
+  images: imagesResponse[]; // Array of image URLs
   onIndexChanged: (index: number) => void;
 }
 
@@ -46,12 +51,12 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ images, onIndexChanged }) => 
           onScroll={onScroll}
           scrollEventThrottle={16}
           >
-          {images.map((source, i) => {
+          {images.map((obj, i) => {
             return (
               <Image
                 key={i}
                 style={styles.image}
-                source={{ uri: source }}
+                source={{ uri: obj.coverImg }}
               />
             );
           })}

@@ -1,29 +1,30 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { Image } from 'expo-image';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Dimensions, Keyboard } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import BottomSheet, { BottomSheetRefProps } from './Props/BottomSheet';
-import Toast from 'react-native-toast-message';
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { StatusBar } from 'expo-status-bar'
+import { Image } from 'expo-image'
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Dimensions, Keyboard } from 'react-native'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import BottomSheet, { BottomSheetRefProps } from './Props/BottomSheet'
+import Toast from 'react-native-toast-message'
 import axios from 'axios'
-import { APIResponseTypes } from './Types'
-import { download } from './Props/FileDownloader'
-import ImageSlider from './Props/ImageSlider';
-import { ALERT_TYPE, Dialog, AlertNotificationRoot, IConfigDialog } from 'react-native-alert-notification';
+import Downloadables from './Props/FileDownloader'
+import ImageSlider from './Props/ImageSlider'
+import * as Clipboard from 'expo-clipboard'
+import { ALERT_TYPE, Dialog, AlertNotificationRoot, IConfigDialog } from 'react-native-alert-notification'
 
 export default function App() {
-  const [mediaIndexing, setMediaIndexing] = useState<number>(0)
-  const ref = useRef<BottomSheetRefProps>(null);
-  const [url, setURL] = useState<string>('')
-  const [data, setData] = useState<APIResponseTypes | null>(null)
-  const [sourceImg, changeSourceImg] = useState(require('./assets/url/paste.png'))
+  const [clipboardString, setClipboardString] = useState('');
+  const [mediaIndexing, setMediaIndexing] = useState(0);
+  const bottomSheetRef = useRef(null);
+  const [url, setURL] = useState('');
+  const [data, setData] = useState(null);
+  const [sourceImg, changeSourceImg] = useState(require('./assets/url/paste.png'));
   const screenWidth = Dimensions.get('window').width;
   const buttonWidth = Math.min(screenWidth / 1, 100);
 
-  function reactiveInputHandler(e: string | string[]) {
+  function reactiveInputHandler(e) {
 
     // Pop down the bottom sheet
-    ref.current?.scrollTo(0);
+    bottomSheetRef.current?.scrollTo(0)
 
     // Change icon
     if (e.includes('youtube') || e.includes('youtu.be')) changeSourceImg(require('./assets/url/youtube.png'))
@@ -37,9 +38,10 @@ export default function App() {
 
   const downloadBtn = async () => {
     Keyboard.dismiss()
+    setMediaIndexing(0)
 
     if (url) {
-
+      
       const urlPattern = /^(http[s]?:\/\/)(www\.)?[^\s$.?#].[^\s]*$/;
       if (urlPattern.test(url)) {
 
@@ -48,11 +50,13 @@ export default function App() {
           .then(async res => {
 
             // Set the data to the state
+            const combined = await combineImagesWithVideos(res.data)
+            res.data.data.combined = combined
             setData(res.data)
 
             // Pop up the bottom sheet
-            ref.current?.hasData(true)
-            ref.current?.scrollTo(-440)
+            await bottomSheetRef.current?.hasData(true)
+            await bottomSheetRef.current?.scrollTo(-450)
 
             Toast.show({
               type: 'success',
@@ -93,7 +97,42 @@ export default function App() {
       })
     }
 
-  };
+  }
+
+  async function RHSIconPlatform() {
+    if (clipboardString === '') {
+      const clipboardText = await Clipboard.getStringAsync()
+      setClipboardString(clipboardText)
+      reactiveInputHandler(clipboardText)
+      setURL(clipboardText)
+
+    } else {
+      setClipboardString('')
+      reactiveInputHandler('')
+      setURL('')
+    }
+  }
+
+  async function combineImagesWithVideos(data) {
+    let combinedMedia = [];
+
+    if (data.data.video.length > 0) {
+      const videoCoverImgs = data.data.video.map(videoObj => {
+        return { ...videoObj, isVideo: true };
+      })
+      combinedMedia = combinedMedia.concat(videoCoverImgs);
+    }
+
+    if (data.data.images.length > 0) {
+      const standaloneImages = data.data.images.map((url) => ({
+        coverImg: url,
+        isVideo: false,
+      }))
+      combinedMedia = combinedMedia.concat(standaloneImages);
+    }
+
+    return combinedMedia
+  }
 
   useEffect(() => {
 
@@ -106,13 +145,8 @@ export default function App() {
   }, [data])
 
   Keyboard.addListener('keyboardDidShow', () => {
-    ref.current?.scrollTo(0);
+    bottomSheetRef.current?.scrollTo(0);
   })
-
-  if (!data) {
-    ref.current?.hasData(false)
-    ref.current?.scrollTo(0);
-  }
 
   return (
 
@@ -124,26 +158,27 @@ export default function App() {
           <Toast />
 
           <View style={styles.dlMainGrapperUI}>
-            
-            <View style={{marginTop: 75, alignItems: 'center'}}>
-              <Image source={require('./assets/inAppIcon.png')} style={{ width: 100, height: 100, marginBottom: 20 }}/>
-              <Text style={styles.headerText}>MEGA DOWNLOAD</Text>
-            </View>
+
+            <Text style={[styles.headerText, { marginTop: 150, alignItems: 'center' }]}>MEGA DOWNLOAD</Text>
 
             <View style={styles.inputCountainer}>
               <TextInput style={styles.urlTextInput}
                 placeholder='Paste a URL'
+                value={clipboardString}
                 placeholderTextColor={"white"}
                 onChangeText={(val) => {
                   reactiveInputHandler(val)
                   setURL(val)
-                  
+                  setClipboardString(val)
+
                 }} />
 
-              <Image style={styles.inputPlatformImage} source={sourceImg} />
+              <TouchableOpacity onPress={RHSIconPlatform}>
+                <Image style={styles.inputPlatformImage} source={sourceImg} />
+              </TouchableOpacity>
             </View>
 
-            <View style={{flexDirection: 'row'}}>
+            <View style={{ flexDirection: 'row' }}>
               <TouchableOpacity style={styles.DownlaodTouchableOpacityButton} onPress={() => downloadBtn()}>
                 <Text style={styles.buttonText}>Download</Text>
               </TouchableOpacity>
@@ -153,41 +188,15 @@ export default function App() {
               </TouchableOpacity> */}
             </View>
 
-            <BottomSheet ref={ref}>
+            <BottomSheet ref={bottomSheetRef}>
               {data !== null ? (
                 <View style={{ flex: 1 }}>
-                  {/* Media Channel Icon
-                  <View style={{ flexDirection: 'row', justifyContent: 'flex-right', aspectRatio: 2.5, height: 50 }}>
-                    <View>
-                      <Image style={{ aspectRatio: 1, height: 50, borderRadius: 25, marginHorizontal: 20 }} source={{ uri: data.data.author.avatarUrl }} />
-                    </View>
-                    <Text style={{ fontSize: 20, marginLeft: -10, fontWeight: '500' }}>{data.data.author.username}</Text>
-                    <View style={{position: 'absolute', right: -(screenWidth -130)}}>
-                      <Image style={{ aspectRatio: 1, height: 50, flex: 1}} source={require('./assets/url/youtube.png')} />
-                    </View>
-                  </View> */}
-
-                  {/* <Text style={{ fontSize: 10, marginTop: -25, marginBottom: 20, marginLeft: 90, fontWeight: '300' }}>13.9M Subscribers   •   1.6K Videos</Text> */}
 
                   <View style={styles.responseSheet}>
 
                     {/* Media Cover */}
                     <View style={styles.mediaImageHandle}>
-                      {data.data.images.length ? (
-                        <View style={styles.mediaImage}>
-                          <ImageSlider images={data.data.images} onIndexChanged={(index) => setMediaIndexing(index)} />
-                        </View>
-                      ) : data.data.coverImg !== null ? (
-                        <Image source={{ uri: data.data.coverImg }} style={styles.mediaImage} />
-                      ) : (
-                        data?.data.video ? (
-                          data?.data.video.map((i, e) => (
-                            <Image source={{ uri: i.coverImg }} key={e} style={styles.mediaImage} />
-                          ))
-                        ) : (
-                          <Text style={{ justifyContent: 'center', textAlign: 'center', color: 'black' }}>No images has been found :/</Text>
-                        )
-                      )}
+                      <ImageSlider images={data.data.combined} onIndexChanged={(index) => setMediaIndexing(index)} />
                     </View>
 
                     <Text style={{ color: 'black', marginTop: 10, fontWeight: '300', fontSize: 10 }}>
@@ -200,31 +209,8 @@ export default function App() {
 
                     {/* Qualities */}
                     <Text style={{ color: 'black', marginTop: 10 }}>Choose your quality to download!</Text>
-                    <View style={styles.qualitiesHandle}>
+                    <Downloadables data={data} mediaIndexing={mediaIndexing}/> 
 
-                      {data.data.images.length ? (
-                        <TouchableOpacity key={mediaIndexing} style={[styles.Qualities, { width: 320 }]} onPress={() => download(data.data.images[mediaIndexing], data?.data.id)}>
-                          <Text style={styles.QualitiesText}>Download Image</Text>
-                        </TouchableOpacity>
-                      ) : data?.data.video[mediaIndexing].qualities ? (
-                        data?.data.video[mediaIndexing].qualities.map((a, index) => (
-                          <TouchableOpacity key={index} style={[styles.Qualities, { width: 100 }]} onPress={() => download(a.url, data?.data.id)}>
-                            <Text style={styles.QualitiesText}>{a.quality}</Text>
-                          </TouchableOpacity>
-                        ))
-                      ) : (
-                        <TouchableOpacity key={mediaIndexing} style={[styles.Qualities, { width: 320 }]} onPress={() => download(data?.data.video[mediaIndexing].url, data?.data.id)}>
-                          <Text style={styles.QualitiesText}>Download Video</Text>
-                        </TouchableOpacity>
-                      )}
-
-                    </View>
-
-                    <View style={{ marginTop: 10 }}>
-                      <TouchableOpacity disabled={data?.data.audio ? data?.data.audio.url === undefined || data?.data.audio.url === '' : true} onPress={() => (download(data?.data.audio.url, data?.data.audio.title))} style={{ width: 320, backgroundColor: 'lightgreen', paddingVertical: 10, borderRadius: 3, alignItems: 'center', }}>
-                        <Text style={styles.QualitiesText}>Download MP3</Text>
-                      </TouchableOpacity>
-                    </View>
                   </View>
                 </View>
               ) : null}
@@ -272,23 +258,6 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
     width: '100%',
     height: '100%'
-  },
-
-  qualitiesHandle: {
-    marginTop: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-
-  Qualities: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'lightblue',
-    paddingVertical: 10,
-    borderRadius: 3,
-    marginHorizontal: 5,
-
   },
 
   QualitiesText: {
